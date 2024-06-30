@@ -14,7 +14,7 @@ description: ""
 # URL of your avatar or profile pic (you could use your GitHub profile pic)
 avatar: https://www.now61.com/f/BnqKSp/0119d95da98990a8012163ba589d72.jpg@1280w_1l_2o_100sh.jpg
 # 你的favicon（出现在浏览器tab上）图片URL，建议使用较小(64px × 64px)的图片
-favicon: https://www.now61.com/f/7d40TW/favicon.ico
+favicon: https://raw.githubusercontent.com/hhzhuhaoze/Blog/master/favicon.ico
 
 # Tabs in header. There are 'Blog', 'About', 'Archive', 'Tags'
 # and URL Link(e.g. 'Theme' tab below) tabs. If you don't need one, just delete
