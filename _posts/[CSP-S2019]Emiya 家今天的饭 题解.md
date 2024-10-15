@@ -1,0 +1,184 @@
+---
+layout: post
+title: "[CSP-S2019]Emiya 家今天的饭 题解"
+date:    2024.10.15
+tags: [题解]
+comments: false
+author: Torrent
+---
+
+## [CSP-S2019]Emiya 家今天的饭 题解
+
+### 题意分析
+
+给出一个矩阵，要求每行只能选一个节点，每列选的节点不能超过所有选的节点的一半，不能不选，给出每个节点的选择方案数，求总方案数
+
+### 考场思路
+
+考虑~~暴力~~枚举每一个点的选择情况，最后统计答案。
+
+**对于行：** 但是因为有每一行只能选择一个的限制，所以考虑当前行选择一个后直接转跳到下一行。
+
+**对于每一个点大小：** 考虑每种烹饪方法都只能选一种，而且在每个点本身上面改变选择的数字对最后的最终方案无影响，所以可以在最后加上所有选择的菜品的数量的累乘结果。
+
+**对于每一列：** 因为每一行只能选择一个，所以显然答案的最大值就是$n$，所以当每列选择数量超过$\lfloor \frac n 2 \rfloor$时可以考虑直接剪掉在该列剩下的选择
+
+#### 考场代码：
+
+```cpp
+#include<iostream>
+using namespace std ;
+#define MOD 998244353
+int n = 0 , m = 0 ;
+int a[105][2005] = {} ;
+bool use[105][2005] = {} ;
+bool vis[105] = {} ;
+int cntl[2005] = {} ;
+long long ans = 0 , k = 0 ;
+bool check()
+{
+    if(k < 1)
+        return false ;
+    for(int j = 1 ; j <= m ; ++j)
+    {
+        if(cntl[j] > k / 2)
+            return false ;
+    }
+    return true ;
+}
+void dfs(int i , int j)
+{
+    if(i == n + 1)
+    {
+        if(check())
+        {
+            long long jia = 1 ;
+            for(int i = 1 ; i <= n ; ++i)
+            {
+                if(!vis[i])
+                    continue ;
+                for(int j = 1 ; j <= m ; ++j)
+                {
+                    if(use[i][j])
+                    {
+                        jia *= a[i][j] , jia %= MOD ;
+                        break ;
+                    }
+                }
+            }
+            ans += jia , ans %= MOD ;
+        }
+        return ;
+    }
+    if(a[i][j] && cntl[j] <= n / 2)
+    {
+        use[i][j] = true , ++k , vis[i] = true , ++cntl[j] ;
+        dfs(i + 1 , 1) ;
+        use[i][j] = false , --k , vis[i] = false , --cntl[j] ;
+    }
+    if(j == m)
+        dfs(i + 1 , 1) ;
+    else
+        dfs(i , j + 1) ;
+}
+int main()
+{
+    scanf("%d%d" , &n , &m) ;
+    for(int i = 1 ; i <= n ; ++i)
+        for(int j = 1 ; j <= m ; ++j)
+            scanf("%d" , &a[i][j]) ;
+    dfs(1 , 1) ;
+    printf("%lld\n" , ans) ;
+    fclose(stdin) ;
+    fclose(stdout) ;
+    return 0 ;
+}
+```
+
+### 正解思路
+
+显然，看数据范围，如果我们直接像上面一样暴力枚举加剪枝优化，肯定只能拿*32pts*，所以我们要考虑在优化。显然，这道题应使用*dp*解决，但是我们考虑直接是无法进行*dp*的，因为每一个点在选择后都会影响后面点的选择情况，所以直接*dp*显然行不通。
+
+但是，我们再观察一下题目的限制条件，我们可以发现，第*1、2*条限制相对于第三条限制要方便处理得多，所以，我们可以考虑先计算出所有满足第*1、2*条限制的方案数，再使用*dp*推出其中不符合第三个条件的方案数，用所有方案数减去不合法方案数即可。
+
+所以，我们现在的问题就转变成了，求任意列列选的节点超过所以所选节点的方案数之和。
+
+显然，在一个方案中，只可能有一列超过所有选的节点的一半。因此可以想到枚举这个超过限制的列，然后对于这个列进行*dp*求解。
+
+### 具体实现
+
+设 *f<sub>i,j,k</sub>* 表示前 *i* 行选 *j* 个节点，当前枚举到的列选 *k* 个节点的方案数。对于每列，复杂度为$O(n^3)$，总的复杂度为$O(mn^3)$，可以拿到 *84* 分。
+
+这样的*dp*转移方程式：
+
+> $dp[i+1][j+1][k+1]+=dp[i][j][k]*a[i][j]$ //在该行选该列
+> 
+> $dp[i+1][j+1][k]+=dp[i][j][k]*(cnt[i]-a[i][p])$ //不选该列(但是该行要选一个)(假设当前是第$p$列)
+> 
+> $dp[i+1][j][k]+=dp[i][j][k]$ //该行不选
+
+但是，想得满分还需要进一步优化。我们观察我们设计的状态。可以发现，对于 *j、k* 我们想要知道的只是它们的大小关系，而与它们的实际大小无关，所以考虑将它们合并为一维。
+
+考虑到我们需要的现实条件是$\lfloor \frac k 2 \rfloor$，我们可以将这个式子变一下形，就是$2k + n - j > n$，观察这个式子，我们发现，$n - j$就是这$n$行中未选的行数，由此，我们可以想到一个非常逆天的思路，当这一列被选时，当作该列选了两次 ，不选时，当作所有列选了一次，于是，我们便成功地将第二维与第三维合并了。
+
+然后，我们就可以推出 *dp* 转移方程式：
+
+>  $dp[j][k]=(dp[j][k]+dp[j-1][k]*(cnt[j]-a[j][i]))\bmod MOD ;$//不选当前列
+> 
+> $dp[j][k+1]=(dp[j][k+1]+dp[j-1][k]) \bmod MOD;$//不选当前行
+> 
+> $dp[j][k+2]=(dp[j][k+2]+dp[j-1][k]*a[j][i]) \bmod MOD;$//选当前行当前列对应的节点
+
+- #### 注意：要开$long long$还要注意加上$MOD$防止出现负数！
+
+### 代码：
+
+```cpp
+#include <iostream>
+#include <cstring>
+#define ll long long
+using namespace std ;
+int read()
+{
+    int w = 0 ;
+    char ch = getchar() ;
+    while(!isdigit(ch))
+        ch = getchar() ;
+    while(isdigit(ch))
+        w = w * 10 + ch - '0' , ch = getchar() ;
+    return w ;
+}
+const int MAXN = 105 , MAXM = 2005 , MOD = 998244353 ;
+int n = 0 , m = 0 ;
+ll ans = 1 ;
+ll cnt[MAXN] = {} , a[MAXN][MAXM] = {} , dp[MAXN][MAXM] = {} ;
+int main()
+{
+    n = read() , m = read() ;
+    for (int i = 1 ; i <= n ; ++i)
+    {
+        for (int j = 1 ; j <= m ; ++j)
+            a[i][j] = read() , cnt[i] = (cnt[i] + a[i][j]) % MOD ;
+        ans = (ans * (cnt[i] + 1)) % MOD ;
+    }
+    ans = (ans + MOD - 1) % MOD ;
+    for (int i = 1 ; i <= m ; ++i)
+    {
+        memset(dp , 0 , sizeof(dp)) ;
+        dp[0][0] = 1 ;
+        for (int j = 1 ; j <= n ; ++j)
+            for (int k = 0 ; k <= 2 * (j - 1) ; ++k)
+            {
+                dp[j][k] = (dp[j][k] + dp[j - 1][k] * (cnt[j] - a[j][i])) % MOD ;
+                dp[j][k + 1] = (dp[j][k + 1] + dp[j - 1][k]) % MOD ;
+                dp[j][k + 2] = (dp[j][k + 2] + dp[j - 1][k] * a[j][i]) % MOD ;
+            }
+        for (int j = n + 1 ; j <= 2 * n ; ++j)
+            ans = (ans + MOD - dp[n][j]) % MOD ;
+    }
+    printf("%lld\n" , ans) ;
+    fclose(stdin) ;
+    fclose(stdout) ;
+    return 0 ;
+}
+```
